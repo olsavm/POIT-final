@@ -1,0 +1,331 @@
+<!DOCTYPE HTML>
+<html>
+   <head>
+      <title>Flask-SocketIO Test</title>
+      <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.5/socket.io.min.js"></script>
+      <link rel="stylesheet" href="static/libs/jquery-ui.min.css">
+      <script src="static/libs/plotly-latest.min.js"></script>
+      <script src="static/libs/jquery-3.2.1.min.js"></script>
+      <script src="static/libs/jquery-ui.min.js"></script>
+      <script src="static/libs/gauge.min.js"></script>
+      <script type="text/javascript" charset="utf-8">
+         $( function() {
+           $( "#tabs" ).tabs({
+             event: "mouseover"
+           });
+         });
+         $(document).ready(function() {
+           var msg = undefined; 
+           var xAx = new Array();
+           var yAx = new Array();
+           var tempAx = new Array();
+           
+          var gauge = new RadialGauge({
+          renderTo: 'canvasid',
+          width: 300,
+          height: 300,
+          units: "lux",
+          minvalue: 0,
+          maxvalue: 1000,
+          majorticks: [
+          "0",
+              "100",
+              "200",
+              "300",
+              "400",
+              "500",
+              "600",
+              "700",
+              "800",
+              "900",
+              "1000"
+          ],
+          minorticks: 2,
+          stroketicks: true,
+          colorplate: "#fff",
+          bordershadowwidth: 0,
+          borders: false,
+          needletype: "arrow",
+          needlewidth: 2,
+          needlecirclesize: 7,
+          needlecircleouter: true,
+          needlecircleinner: false,
+          animationduration: 1500,
+          animationrule: "linear"
+          });
+         gauge.draw();
+         
+          var gauge2 = new RadialGauge({
+          renderTo: 'canvasid2',
+          width: 300,
+          height: 300,
+          units: "C",
+          minvalue: 0,
+          maxvalue: 5,
+          majorticks: [
+              "0",
+              "0.5",
+              "1.0",
+              "1.5",
+              "2.0",
+              "2.5",
+              "3.0",
+              "3.5",
+              "4.0",
+              "4.5",
+              "5.0"
+          ],
+          minorticks: 2,
+          stroketicks: true,
+          highlights: [
+              {
+                  "from": 4.0,
+                  "to": 5.0,
+                  "color": "rgba(200, 50, 50, .75)"
+              }
+          ],
+          colorplate: "#fff",
+          bordershadowwidth: 0,
+          borders: false,
+          needletype: "arrow",
+          needlewidth: 2,
+          needlecirclesize: 7,
+          needlecircleouter: true,
+          needlecircleinner: false,
+          animationduration: 1500,
+          animationrule: "linear"
+          });
+         gauge2.draw();
+      
+         // Define Layout
+         var layout = {
+           xaxis: {title: "poradove cislo spravy"},
+           yaxis: {title: "intenzita(lux)"},
+           title: "graf nameranej intenzity svetla"
+         };
+      
+         var layout2 = {
+           xaxis: {title: "poradove cislo spravy"},
+           yaxis: {title: "teplota(C)"},
+           title: "graf teploty"
+         };
+      
+         namespace = '/test';
+         var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + namespace);
+
+         socket.on('connect', function() {
+         socket.emit('my_event', {data: 'I\'m connected!', value: 1}); });
+
+         socket.on('my_response', function(msg) {
+         console.log(msg.data);
+         $('#log').append('Received #'+msg.count+'-> Intenzita svetla: '+msg.data+'lux, Teplota: ' + msg.temp + 'C <br>').html();
+
+         var data = [{
+           x: xAx,
+           y: yAx,
+           mode: "lines",
+           type: "scatter"
+         }];
+         
+         var data2 = [{
+           x: xAx,
+           y: tempAx,
+           mode: "lines",
+           type: "scatter"
+         }];
+
+         gauge.value = msg.data;
+         gauge2.value = msg.temp;
+
+         xAx.push(parseFloat(msg.count));
+
+         yAx.push(parseFloat(msg.data));
+         
+         tempAx.push(parseFloat(msg.temp))
+
+         Plotly.newPlot("plotdiv", data, layout);
+         
+        Plotly.newPlot("plotdiv2", data2, layout2);
+         });
+         
+        // Plotly.newPlot("plotdiv2", data2, layout2);
+        // });
+
+
+         $('form#emit').submit(function(event) {
+           socket.emit('my_event', {value: $('#emit_value').val()});
+           return false; });
+         $('#buttonValStart').click(function(event) {
+          console.log($('#buttonValStart').val());
+          socket.emit('click_eventStart', {value: $('#buttonValStart').val()});
+          return false; });
+         $('#buttonValStop').click(function(event) {
+          console.log($('#buttonValStop').val());
+          socket.emit('click_eventStop', {value: $('#buttonValStop').val()});
+         return false; });
+         $('form#disconnect').submit(function(event) {
+           socket.emit('disconnect_request');
+           return false; });      
+           
+         $('form#recordDb').submit(function(event) {
+                  var layout = {
+          title: 'graf nameranej intenzity svetla',
+          xaxis: {
+            title: 'index spravy'
+          },
+          yaxis: {
+            title: 'intenzita(lux)'
+          }
+        };
+                  
+      var $link = "dbdata/"+$('#valueDb').val();
+      
+    $.ajax({
+      type: "POST",
+      url: $link,
+      success:function(data) 
+      { console.log('DATA', data);  
+        data = JSON.parse(data);
+        console.log(data);    
+        n = Object.keys(data).length;
+        console.log(n);
+        
+        xl = [];
+        yl = [];
+        yt = [];
+        
+        for (var i=0; i< n; i++){
+          xl.push(data[i].x);
+          yl.push(data[i].y);
+          yt.push(data[i].temp);
+       }
+          
+        var trace = [{
+            x: xl,
+            y: yl}];  
+            
+            var trace2 = [{
+            x: xl,
+            y: yt}];  
+        
+        console.log("traces", trace);
+        Plotly.newPlot($('#plotdivId')[0],trace,layout);
+        Plotly.newPlot($('#plotdivId2')[0],trace2,layout2);  
+      }
+    }).done(function( o ) {
+       // do something
+    });    
+    
+      return false });
+      
+      $('form#recordFile').submit(function(event) {
+                  var layout = {
+          title: 'graf nameranej intenzity svetla',
+          xaxis: {
+            title: 'index spravy'
+          },
+          yaxis: {
+            title: 'intenzita svetla(lux)'
+          }
+        };
+                          var layout2 = {
+          title: 'graf teploty',
+          xaxis: {
+            title: 'index spravy'
+          },
+          yaxis: {
+            title: 'teplota(C)'
+          }
+        };
+                  
+      var $link = "read/"+$('#valueFile').val();
+      
+    $.ajax({
+      type: "POST",
+      url: $link,
+      success:function(data) 
+      { console.log(data);  
+        data = JSON.parse(data);
+        console.log(data);    
+        n = Object.keys(data).length;
+        console.log(n);
+        
+        xl = [];
+        yl = [];
+        yt = [];
+        
+        for (var i=0; i< n; i++){
+          xl.push(data[i].x);
+          yl.push(data[i].y);
+          yt.push(data[i].temp) 
+       }
+          
+        var trace = [{
+            x: xl,
+            y: yl}];  
+            
+            var trace2 = [{
+            x: xl,
+            y: yt}];  
+        
+        console.log("traces", trace);
+        Plotly.newPlot($('#plotdivRow')[0],trace,layout);
+        Plotly.newPlot($('#plotdivRow2')[0],trace2,layout2);            
+      }
+    }).done(function( o ) {
+       // do something
+    });    
+    
+      return false });
+              
+         });
+      </script>
+   </head>
+   <body>
+      <h1>Intenzita osvetlenia</h1>
+      <button id="buttonValStart" type="submit" value="send">Zacat meranie</button>
+      <button id="buttonValStop" type="submit" value="stop">Skoncit meranie</button>
+      <form id="disconnect" method="POST" action="#">
+         <input type="submit" value="Disconnect">
+      </form>
+      <div id="tabs">
+         <ul>
+            <li><a href="#tabs-1">LOG</a></li>
+            <li><a href="#tabs-2">GRAF</a></li>
+            <li><a href="#tabs-3">CIFERNIK</a></li>
+            <li><a href="#tabs-4">GRAF PODLA ID MERANIA V DATABAZE</a></li>
+            <li><a href="#tabs-5">GRAF PODLA CISLA RIADKA V SUBORE</a></li>
+         </ul>
+         <div id="tabs-1">
+            <h2>Receive:</h2>
+            <div id="log"></div>
+         </div>
+         <div id="tabs-2">
+            <div id="plotdiv" style="width:600px;height:250px;"></div>
+            <div id="plotdiv2" style="width:600px;height:250px;"></div>
+         </div>
+         <div id="tabs-3">
+            <canvas id="canvasid"></canvas>
+            <canvas id="canvasid2"></canvas>
+         </div>
+         <div id="tabs-4">
+            <form id = "recordDb" method="POST" action='#'>
+  <input type="text" name="value" id="valueDb" placeholder="cislo zaznamu v databaze">
+  <input type="submit" value="Set">
+</form>
+            
+            <div id="plotdivId" style="width:600px;height:250px;"></div>
+            <div id="plotdivId2" style="width:600px;height:250px;"></div>
+         </div>
+         
+         <div id="tabs-5">
+            <form id = "recordFile" method="POST" action='#'>
+  <input type="text" name="value" id="valueFile" placeholder="cislo riadku vo file">
+  <input type="submit" value="Set">
+</form>
+            <div id="plotdivRow" style="width:600px;height:250px;"></div>
+            <div id="plotdivRow2" style="width:600px;height:250px;"></div>
+         </div>
+      </div>
+   </body>
+</html>
