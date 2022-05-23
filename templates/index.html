@@ -117,7 +117,6 @@
          socket.emit('my_event', {data: 'I\'m connected!', value: 1}); });
 
          socket.on('my_response', function(msg) {
-         console.log(msg.data);
          $('#log').append('Received #'+msg.count+'-> Intenzita svetla: '+msg.data+'lux, Teplota: ' + msg.temp + 'C <br>').html();
 
          var data = [{
@@ -156,11 +155,9 @@
            socket.emit('my_event', {value: $('#emit_value').val()});
            return false; });
          $('#buttonValStart').click(function(event) {
-          console.log($('#buttonValStart').val());
           socket.emit('click_eventStart', {value: $('#buttonValStart').val()});
           return false; });
          $('#buttonValStop').click(function(event) {
-          console.log($('#buttonValStop').val());
           socket.emit('click_eventStop', {value: $('#buttonValStop').val()});
          return false; });
          $('form#disconnect').submit(function(event) {
@@ -184,11 +181,9 @@
       type: "POST",
       url: $link,
       success:function(data) 
-      { console.log('DATA', data);  
-        data = JSON.parse(data);
-        console.log(data);    
+      {  
+        data = JSON.parse(data);   
         n = Object.keys(data).length;
-        console.log(n);
         
         xl = [];
         yl = [];
@@ -208,7 +203,6 @@
             x: xl,
             y: yt}];  
         
-        console.log("traces", trace);
         Plotly.newPlot($('#plotdivId')[0],trace,layout);
         Plotly.newPlot($('#plotdivId2')[0],trace2,layout2);  
       }
@@ -244,11 +238,9 @@
       type: "POST",
       url: $link,
       success:function(data) 
-      { console.log(data);  
-        data = JSON.parse(data);
-        console.log(data);    
+      { 
+        data = JSON.parse(data);  
         n = Object.keys(data).length;
-        console.log(n);
         
         xl = [];
         yl = [];
@@ -268,7 +260,6 @@
             x: xl,
             y: yt}];  
         
-        console.log("traces", trace);
         Plotly.newPlot($('#plotdivRow')[0],trace,layout);
         Plotly.newPlot($('#plotdivRow2')[0],trace2,layout2);            
       }
